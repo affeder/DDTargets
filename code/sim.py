@@ -1,8 +1,24 @@
 #!/usr/bin/python
 import numpy
 import math
-import sys
-import optfunc
+import argparse
+
+
+parser = argparse.ArgumentParser(description='Model DDT populations')
+
+#parser.add_argument('Number of cells', metavar='N', type=int, nargs='+',
+#                   help='Number of cells in a generation')
+
+parser.add_argument('-N', '--NUMCELLS', default = 500, help='Number of cells in each generation', type = int)
+parser.add_argument('-f', '--FREQUENCY', default = .5, help='Initial frequency of DR viral strains', type = int)
+parser.add_argument('-MOI',  default = 5, help='Initial MOI of infection', type = int)
+parser.add_argument('-r', '--RATE', default = 100, help='Number of capsid proteins produced per viral particle', type = int)
+parser.add_argument('-c', '--CAPSIDSIZE', default = 60, help='Number of capsid proteins per capsid', type = int)
+parser.add_argument('-l', '--LENGTH', default = 10, help='Number of generations the simulation should run', type = int)
+
+args = parser.parse_args()
+
+print "#", args
 
 class Cell:
     'Common base class for all cells'
@@ -40,7 +56,7 @@ class Cell:
         return self.numCaps
 
     def assembleCapsids(self):
-        while(sum(self.numCaps) > capsidSize):
+        while(sum(self.numCaps) > args.CAPSIDSIZE):
 
             self.capsid_list.append(Capsid(self))
 
@@ -90,7 +106,7 @@ class Capsid:
         #print Host.numCaps;
 
         self.capsType = [0,0]
-        while(sum(self.capsType) < capsidproteinsneeded):
+        while(sum(self.capsType) < args.CAPSIDSIZE):
             self.tmp = self.fill(Host)
 #            self.capsType[self.tmp] = self.capsType[self.tmp] +1
             
@@ -111,7 +127,7 @@ class Capsid:
             return 0
 
     def willSurvive(self):
-        self.surviveprob = 1-self.capsType[0]/capsidproteinsneeded
+        self.surviveprob = 1-self.capsType[0]/args.CAPSIDSIZE
         if numpy.random.binomial(1, self.surviveprob, 1) == 1:
             return 1
         else:
@@ -126,7 +142,7 @@ class Virus:
         print "Resistance status:", self.resist
 
     def produce(self):
-        return math.ceil(numpy.random.normal(rate + mult* self.resist, 1, 1)[0])
+        return math.ceil(numpy.random.normal(args.RATE + mult* self.resist, 1, 1)[0])
 
 class Culture:
 
@@ -199,38 +215,23 @@ class Culture:
 
         print "\t".join([str(numpy.mean(self.numViruses)), str(numpy.mean(self.resistStats)),str(numpy.mean(self.capsidStats)), str(numpy.mean(self.capsidResist))])
 
-print sys.argv[1]
 
-rate = 120
-mult = -5
-capsidSize = 60
-capsidproteinsneeded= 60
+mult = 0
 threshold = 45
 
-#1000 cells
-#start with a singlecell multiply infected with 5 strains
 
-initPop = Culture(1000, 10, .01)
+initPop = Culture(args.NUMCELLS, args.MOI, args.FREQUENCY)
 initPop.initialize()
 initPop.makeCapsidProtein()
 initPop.makeCapsids()
-#initPop.printAll()
-
 initPop.summary()
 
-for i in range(12):
+for i in range(args.LENGTH):
 
     newCulture = Culture(1000, 0, 0)
     initPop.transfer(newCulture)
     newCulture.makeCapsidProtein()
     newCulture.makeCapsids()
-#    newCulture.printAll()
-
     newCulture.summary()
     initPop = newCulture
 
-
-#for i in range(len(newPop)):
-#    print newPop[i]
-
-#How about a spread method, where it infects not just across different capsids, but also different cells
